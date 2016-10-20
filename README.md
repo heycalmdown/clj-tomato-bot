@@ -2,31 +2,27 @@
 
 tomayto or tomahto
 
-## Installation
-
-Download from http://example.com/FIXME.
+Pomodoro bot for Telegram.
 
 ## Usage
 
-FIXME: explanation
+- /go - Start a pomodoro session
+- /check - Check remaining time for current session
+- /cancel - Stop this session
 
-    $ java -jar clj-tomato-bot-0.1.0-standalone.jar [args]
 
-## Options
+## Features
 
-FIXME: listing of options this app accepts.
+- Can take a pomodoro session in Telegram
+- Notify states of the session 
+- Support many devices (thanks Telegram)
 
-## Examples
 
-...
+## Not featured yet
 
-### Bugs
+- Sharing a pomodoro session with your friend
+- Stack-based task management
 
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
 
 ## License
 
