@@ -7,17 +7,19 @@ Pomodoro bot for Telegram.
 ## Usage
 
 - /go - Start a pomodoro session
-- /check - Check remaining time for current session
+- /check - Check remaining time for the current session
+- /count - Show how many sessions do you have
 - /cancel - Stop this session
 
 
-![telegram screenshot](https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png)
+![telegram screenshot](https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png =480x)
 
 ## Features
 
-- Can take a pomodoro session in Telegram
-- Notify states of the session 
-- Support many devices (thanks Telegram)
+- Can have a pomodoro session in a Telegram messenger
+- Notify the current state of the session 
+- Support multiple devices
+- Show remaining time on the fly
 
 
 ## Not featured yet
@@ -28,7 +30,7 @@ Pomodoro bot for Telegram.
 
 ## License
 
-Copyright © 2016 FIXME
+Copyright © 2016 Kei Son
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
