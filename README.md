@@ -11,8 +11,7 @@ Pomodoro bot for Telegram.
 - /count - Show how many sessions do you have
 - /cancel - Stop this session
 
-
-![telegram screenshot](https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png =480x)
+<img alt="telegram screenshot" src="https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png" width="480px">
 
 ## Features
 
