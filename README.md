@@ -11,6 +11,8 @@ Pomodoro bot for Telegram.
 - /cancel - Stop this session
 
 
+![telegram screenshot](https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png)
+
 ## Features
 
 - Can take a pomodoro session in Telegram
