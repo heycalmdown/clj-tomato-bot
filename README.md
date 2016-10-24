@@ -1,5 +1,8 @@
 # clj-tomato-bot
 
+[![Circle CI](https://circleci.com/gh/heycalmdown/clj-tomato-bot.svg?style=shield&no-cache=2)](https://circleci.com/gh/heycalmdown/clj-tomato-bot)
+
+
 tomayto or tomahto
 
 Pomodoro bot for Telegram.
