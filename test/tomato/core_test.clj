@@ -11,7 +11,7 @@
     (is (= (session-alive? {:timer nil}) false))
     (is (= (session-alive? {:timer true}) true))))
 
-(deftest goto-x-text
-  (testing ":pomodoro"
-    (goto-x :pomodoro)
-    (is (= (:mode @state) :pomodoro))))
+;(deftest goto-x-text
+;  (testing ":pomodoro"
+;    (goto-x :pomodoro)
+;    (is (= (:mode @state) :pomodoro))))
