@@ -1,7 +1,17 @@
-(ns clj-tomato-bot.core-test
+(ns tomato.core-test
   (:require [clojure.test :refer :all]
-            [clj-tomato-bot.core :refer :all]))
+            [tomato.core :refer :all]))
 
 (deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+  (testing "ms->sec"
+    (is (= (ms->sec 999) 0))
+    (is (= (ms->sec 1000) 1))
+    (is (= (ms->sec 1001) 1)))
+  (testing "session-alive?"
+    (is (= (session-alive? {:timer nil}) false))
+    (is (= (session-alive? {:timer true}) true))))
+
+(deftest goto-x-text
+  (testing ":pomodoro"
+    (goto-x :pomodoro)
+    (is (= (:mode @state) :pomodoro))))

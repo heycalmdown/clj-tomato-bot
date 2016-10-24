@@ -56,22 +56,20 @@
   (ms->sec (- (base-time) (elapsed-time))))
 
 (defn edit-message [id message]
-  ;(send-m message)
-  (edit-m message id)
-  )
+  (edit-m message id))
 
-(defn session-alive? []
-  (nil? (:timer @state)))
+(defn session-alive? [state]
+  (not (nil? (:timer state))))
 
 
 
-(defn send-remaining [byline]
-  (if (nil? (:message-id @state))
+(defn send-remaining [message-id byline]
+  (if (nil? message-id)
     (->> (send-m (str "남은 시간은 " (remaining-time) "초"))
          :result
          :message_id
          (swap! state assoc :message-id))
-    (edit-message (:message-id @state) (str "남은 시간은 " (remaining-time) "/" (ms->sec (base-time)) "초 by " byline))))
+    (edit-m (str "남은 시간은 " (remaining-time) "/" (ms->sec (base-time)) "초 by " byline) message-id)))
 
 
 
@@ -82,7 +80,7 @@
     (swap! state assoc :started (System/currentTimeMillis))
     (swap! state assoc :message-id nil)
     (when-not (nil? (:interval @state)) (future-cancel (:interval @state)))
-    (swap! state assoc :interval (set-interval #(send-remaining "interval") (secs 10)))
+    (swap! state assoc :interval (set-interval #(send-remaining (:message-id @state) "interval") (secs 10)))
     (when (= key :relax)
       (swap! counted inc))
     (set-timeout #(goto-x (:next mode)) (:during mode))))
@@ -90,17 +88,17 @@
 
 ;;;; Handlers
 (defn timer-start []
-  (if (session-alive?)
-    (goto-x :pomodoro)
-    (send-m "이미 세션이 진행중입니다")))
+  (if (session-alive? @state)
+    (send-m "이미 세션이 진행중입니다")
+    (goto-x :pomodoro)))
 
 (defn check-remaining []
-  (if-not (session-alive?)
-    (send-remaining "manual")
+  (if (session-alive? @state)
+    (send-remaining (:message-id @state) "manual")
     (send-m "타이머가 돌고 있지 않음")))
 
 (defn cancel-timer []
-  (if-not (session-alive?)
+  (if (session-alive? @state)
     (do
       (future-cancel (:timer @state))
       (future-cancel (:interval @state))
@@ -108,13 +106,13 @@
       (send-m (str (:mode @state) " 취소되었습니다")))
     (send-m "진행중인 태스크가 없습니다")))
 
-(defn count-counted []
-  (send-m (str @counted)))
+(defn send-counted [counted]
+  (send-m (str counted)))
 
 (defhandler bot-api
             (command "go" [] (timer-start))
             (command "check" [] (check-remaining))
-            (command "count" [] (count-counted))
+            (command "count" [] (send-counted @counted))
             (command "cancel" [] (cancel-timer)))
 
 (def channel (atom nil))
@@ -127,7 +125,7 @@
 
 (defn -main
   "I don't do a whole lot ... yet."
-  [& args]
+  []
   (println "Hello, World!"))
 
 (start)
