@@ -27,6 +27,12 @@ Pomodoro bot for Telegram.
 - Stack-based task management
 
 
+## Terms
+
+- Mode - one of :pomodoro or :relax
+- Session - a pair of :pomodoro and :relax
+
+
 ## License
 
 Copyright © 2016 Kei Son
