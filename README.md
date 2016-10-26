@@ -13,6 +13,8 @@ Pomodoro bot for Telegram.
 - /check - Check remaining time for the current session
 - /count - Show how many sessions do you have
 - /cancel - Stop this session
+- /pause - Pause this session
+- /resume - Resume previous paused session without losing timer
 
 <img alt="telegram screenshot" src="https://raw.githubusercontent.com/heycalmdown/clj-tomato-bot/master/doc/sceenshot.png" width="480px">
 
