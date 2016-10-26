@@ -28,9 +28,9 @@
   (future (while true (do (Thread/sleep ms) (callback)))))
 
 (defn set-timeout [callback ms]
-  (swap! state assoc :timer (future (do (Thread/sleep ms)
-                                        (swap! state assoc :timer nil)
-                                        (callback)))))
+  (future (do (Thread/sleep ms)
+              (swap! state assoc :timer nil)
+              (callback))))
 
 
 (defn send-m
@@ -55,39 +55,44 @@
 (defn remaining-time []
   (ms->sec (- (base-time) (elapsed-time))))
 
-(defn edit-message [id message]
-  (edit-m message id))
-
 (defn session-alive? [state]
   (not (nil? (:timer state))))
+
+(defn session-paused? [state]
+  (and (nil? (:timer state)) (not (nil? (:elapsed state)))))
 
 
 
 (defn send-remaining [message-id byline]
   (if (nil? message-id)
-    (->> (send-m (str "남은 시간은 " (remaining-time) "초"))
+    (->> (send-m (str "남은 시간은 " (remaining-time) "초") {:disable_notification true})
          :result
          :message_id
          (swap! state assoc :message-id))
     (edit-m (str "남은 시간은 " (remaining-time) "/" (ms->sec (base-time)) "초 by " byline) message-id)))
 
+(defn remaining-each-10s [get-messageid]
+  (set-interval #(send-remaining (get-messageid) "interval") (secs 10)))
+
 
 
 (defn goto-x [key]
   (let [mode (key modes)]
-    (send-m ((:text mode)))
-    (swap! state assoc :mode key)
-    (swap! state assoc :started (System/currentTimeMillis))
-    (swap! state assoc :message-id nil)
     (when-not (nil? (:interval @state)) (future-cancel (:interval @state)))
-    (swap! state assoc :interval (set-interval #(send-remaining (:message-id @state) "interval") (secs 10)))
+    (swap! state assoc
+           :mode key
+           :started (System/currentTimeMillis)
+           :message-id nil
+           :interval (remaining-each-10s #(:message-id @state))
+           :timer (set-timeout #(goto-x (:next mode)) (:during mode)))
+
     (when (= key :relax)
       (swap! counted inc))
-    (set-timeout #(goto-x (:next mode)) (:during mode))))
+    (send-m ((:text mode)))))
 
 
 ;;;; Handlers
-(defn timer-start []
+(defn start-session []
   (if (session-alive? @state)
     (send-m "이미 세션이 진행중입니다")
     (goto-x :pomodoro)))
@@ -95,25 +100,51 @@
 (defn check-remaining []
   (if (session-alive? @state)
     (send-remaining (:message-id @state) "manual")
-    (send-m "타이머가 돌고 있지 않음")))
+    (send-m "세션이 진행중이 아닙니다")))
 
-(defn cancel-timer []
+(defn cancel-session []
   (if (session-alive? @state)
     (do
       (future-cancel (:timer @state))
       (future-cancel (:interval @state))
       (swap! state assoc :timer nil)
       (send-m (str (:mode @state) " 취소되었습니다")))
-    (send-m "진행중인 태스크가 없습니다")))
+    (send-m "취소할 세션이 없습니다")))
 
 (defn send-counted [counted]
   (send-m (str counted)))
 
+(defn pause-session []
+  (if (session-alive? @state)
+    (do
+      (future-cancel (:timer @state))
+      (future-cancel (:interval @state))
+      (swap! state assoc
+             :elapsed (elapsed-time)
+             :timer nil)
+      (send-m (str (:mode @state) " 잠시 중단 되었습니다")))
+    (send-m "중단할 세션이 없습니다")))
+
+(defn resume-session []
+  (if (session-paused? @state)
+    (let [elapsed (:elapsed @state)
+          mode ((:mode @state) modes)
+          during (- (:during mode) elapsed)]
+
+      (swap! state assoc
+             :started (- (System/currentTimeMillis) elapsed)
+             :timer (set-timeout #(goto-x (:next mode)) during)
+             :interval (remaining-each-10s #(:message-id @state)))
+      (send-m "세션을 다시 시작합니다"))
+    (send-m "다시 시작할 세션이 없습니다")))
+
 (defhandler bot-api
-            (command "go" [] (timer-start))
+            (command "go" [] (start-session))
             (command "check" [] (check-remaining))
             (command "count" [] (send-counted @counted))
-            (command "cancel" [] (cancel-timer)))
+            (command "cancel" [] (cancel-session))
+            (command "pause" [] (pause-session))
+            (command "resume" [] (resume-session)))
 
 (def channel (atom nil))
 
@@ -122,6 +153,10 @@
 
 (defn stop []
   (p/stop @channel))
+
+(defn restart []
+  (do (stop)
+      (start)))
 
 (defn -main
   "I don't do a whole lot ... yet."
