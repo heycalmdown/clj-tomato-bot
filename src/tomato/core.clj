@@ -8,11 +8,11 @@
 
 
 (def counted (atom 1))
-(def state (atom {:timer      nil
-                  :interval   nil
-                  :started    nil
-                  :mode       nil
-                  :message-id nil}))
+(def state-atom (atom {:timer      nil
+                       :interval   nil
+                       :started    nil
+                       :mode       nil
+                       :message-id nil}))
 
 
 
@@ -29,7 +29,7 @@
 
 (defn set-timeout [callback ms]
   (future (do (Thread/sleep ms)
-              (swap! state assoc :timer nil)
+              (swap! state-atom assoc :timer nil)
               (callback))))
 
 
@@ -44,10 +44,10 @@
 
 
 (defn elapsed-time []
-  (- (System/currentTimeMillis) (:started @state)))
+  (- (System/currentTimeMillis) (:started @state-atom)))
 
 (defn base-time []
-  (:during ((:mode @state) modes)))
+  (:during ((:mode @state-atom) modes)))
 
 (defn ms->sec [ms]
   (quot ms 1000))
@@ -61,29 +61,44 @@
 (defn session-paused? [state]
   (and (nil? (:timer state)) (not (nil? (:elapsed state)))))
 
+(defn pluck-message-id [sent-message]
+  (:message_id (:result sent-message)))
+
+(defn lang-remaing [remaining-time base-time byline]
+  (str "남은 시간은 " remaining-time "/" base-time "초 by " byline))
 
 
-(defn send-remaining [message-id byline]
-  (if (nil? message-id)
-    (->> (send-m (str "남은 시간은 " (remaining-time) "초") {:disable_notification true})
-         :result
-         :message_id
-         (swap! state assoc :message-id))
-    (edit-m (str "남은 시간은 " (remaining-time) "/" (ms->sec (base-time)) "초 by " byline) message-id)))
+(defn time-send [message _]
+  (let [sent (send-m message {:disable_notification true})]
+    (swap! state-atom assoc :message-id (pluck-message-id sent))))
 
-(defn remaining-each-10s [get-messageid]
-  (set-interval #(send-remaining (get-messageid) "interval") (secs 10)))
+(defn time-edit [message message-id]
+  (edit-m message message-id))
+
+
+(defn send-remaining [state byline]
+  (let [remaining (remaining-time)
+        base (ms->sec (base-time))
+        message (lang-remaing remaining base byline)
+        message-id (:message-id state)
+        action (cond (nil? message-id) time-send
+                     :else time-edit)]
+    (apply action [message message-id])))
+
+(defn remaining-each-10s [get-state]
+  (set-interval #(send-remaining (get-state) "interval") (secs 10)))
 
 
 
 (defn goto-x [key]
-  (let [mode (key modes)]
-    (when-not (nil? (:interval @state)) (future-cancel (:interval @state)))
-    (swap! state assoc
+  (let [mode (key modes)
+        interval (:interval @state-atom)]
+    (when-not (nil? interval) (future-cancel interval))
+    (swap! state-atom assoc
            :mode key
            :started (System/currentTimeMillis)
            :message-id nil
-           :interval (remaining-each-10s #(:message-id @state))
+           :interval (remaining-each-10s #(deref state-atom))
            :timer (set-timeout #(goto-x (:next mode)) (:during mode)))
 
     (when (= key :relax)
@@ -92,59 +107,59 @@
 
 
 ;;;; Handlers
-(defn start-session []
-  (if (session-alive? @state)
+(defn handle-start-session []
+  (if (session-alive? @state-atom)
     (send-m "이미 세션이 진행중입니다")
     (goto-x :pomodoro)))
 
-(defn check-remaining []
-  (if (session-alive? @state)
-    (send-remaining (:message-id @state) "manual")
+(defn handle-check-remaining [state]
+  (if (session-alive? state)
+    (send-remaining state "manual")
     (send-m "세션이 진행중이 아닙니다")))
 
-(defn cancel-session []
-  (if (session-alive? @state)
+(defn handle-cancel-session []
+  (if (session-alive? @state-atom)
     (do
-      (future-cancel (:timer @state))
-      (future-cancel (:interval @state))
-      (swap! state assoc :timer nil)
-      (send-m (str (:mode @state) " 취소되었습니다")))
+      (future-cancel (:timer @state-atom))
+      (future-cancel (:interval @state-atom))
+      (swap! state-atom assoc :timer nil)
+      (send-m (str (:mode @state-atom) " 취소되었습니다")))
     (send-m "취소할 세션이 없습니다")))
 
-(defn send-counted [counted]
+(defn handle-send-counted [counted]
   (send-m (str counted)))
 
-(defn pause-session []
-  (if (session-alive? @state)
+(defn handle-pause-session []
+  (if (session-alive? @state-atom)
     (do
-      (future-cancel (:timer @state))
-      (future-cancel (:interval @state))
-      (swap! state assoc
+      (future-cancel (:timer @state-atom))
+      (future-cancel (:interval @state-atom))
+      (swap! state-atom assoc
              :elapsed (elapsed-time)
              :timer nil)
-      (send-m (str (:mode @state) " 잠시 중단 되었습니다")))
+      (send-m (str (:mode @state-atom) " 잠시 중단 되었습니다")))
     (send-m "중단할 세션이 없습니다")))
 
-(defn resume-session []
-  (if (session-paused? @state)
-    (let [elapsed (:elapsed @state)
-          mode ((:mode @state) modes)
+(defn handle-resume-session []
+  (if (session-paused? @state-atom)
+    (let [elapsed (:elapsed @state-atom)
+          mode ((:mode @state-atom) modes)
           during (- (:during mode) elapsed)]
 
-      (swap! state assoc
+      (swap! state-atom assoc
              :started (- (System/currentTimeMillis) elapsed)
              :timer (set-timeout #(goto-x (:next mode)) during)
-             :interval (remaining-each-10s #(:message-id @state)))
+             :interval (remaining-each-10s #(:message-id @state-atom)))
       (send-m "세션을 다시 시작합니다"))
     (send-m "다시 시작할 세션이 없습니다")))
 
 (defhandler bot-api
-            (command "go" [] (start-session))
-            (command "check" [] (check-remaining))
-            (command "count" [] (send-counted @counted))
-            (command "cancel" [] (cancel-session))
-            (command "pause" [] (pause-session))
-            (command "resume" [] (resume-session)))
+            (command "go" [] (handle-start-session))
+            (command "check" [] (handle-check-remaining @state-atom))
+            (command "count" [] (handle-send-counted @counted))
+            (command "cancel" [] (handle-cancel-session))
+            (command "pause" [] (handle-pause-session))
+            (command "resume" [] (handle-resume-session)))
 
 (def channel (atom nil))
 
