@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/heycalmdown/clj-tomato-bot.svg?branch=travis)](https://travis-ci.org/heycalmdown/clj-tomato-bot)
 [![Circle CI](https://circleci.com/gh/heycalmdown/clj-tomato-bot.svg?style=shield&no-cache=2)](https://circleci.com/gh/heycalmdown/clj-tomato-bot)
 [![Coverage Status](https://coveralls.io/repos/github/heycalmdown/clj-tomato-bot/badge.svg?branch=travis)](https://coveralls.io/github/heycalmdown/clj-tomato-bot?branch=travis)
+[![Dependencies Status](https://jarkeeper.com/heycalmdown/clj-tomato-bot/status.svg)](https://jarkeeper.com/heycalmdown/clj-tomato-bot)
 
 tomayto or tomahto
 
