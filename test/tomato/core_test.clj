@@ -42,6 +42,27 @@
                             :text "haha"}}]
       (is (= (pluck-message-id message) 1094)))))
 
+(deftest lang-test
+  (testing "remain"
+    (is (= (lang-remaining 10 30 "test") "남은 시간은 10/30초 by test"))))
+
+(deftest stateful-test
+  (testing "send-remaining"
+    (with-redefs-fn {#'current-time (fn [] 0)
+                     #'time-send (fn [message message-id] {:message message :message-id message-id})
+                     #'edit-m (fn [message message-id] {:message message :message-id message-id})}
+      #(do
+        (is (= (send-remaining {:mode :relax
+                                :started 0}
+                               "test")
+               {:message "남은 시간은 30/30초 by test" :message-id nil}))
+        (is (= (send-remaining {:mode :relax
+                                :started 0
+                                :message-id 1}
+                               "test")
+               {:message "남은 시간은 30/30초 by test" :message-id 1}))))))
+
+
 ;(deftest goto-x-text
 ;  (testing ":pomodoro"
 ;    (goto-x :pomodoro)

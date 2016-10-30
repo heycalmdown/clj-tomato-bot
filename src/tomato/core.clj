@@ -66,7 +66,7 @@
 (defn pluck-message-id [sent]
   (:message_id (:result sent)))
 
-(defn lang-remaing [remaining base byline]
+(defn lang-remaining [remaining base byline]
   (str "남은 시간은 " remaining "/" base "초 by " byline))
 
 
@@ -74,17 +74,14 @@
   (let [sent (send-m message {:disable_notification true})]
     (swap! state-atom assoc :message-id (pluck-message-id sent))))
 
-(defn time-edit [message message-id]
-  (edit-m message message-id))
-
 
 (defn send-remaining [state byline]
   (let [remaining (remaining-secs state)
         base (ms->sec (base-time (:mode state)))
-        message (lang-remaing remaining base byline)
+        message (lang-remaining remaining base byline)
         message-id (:message-id state)
         action (cond (nil? message-id) time-send
-                     :else time-edit)]
+                     :else edit-m)]
     (apply action [message message-id])))
 
 (defn remaining-each-10s [get-state]
