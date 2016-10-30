@@ -2,3 +2,5 @@ language: clojure
 before_script:
   - mkdir resources
   - cp config.sample.edl resources/config.edl
+after_script:
+  - bash -ex test/coveralls.sh
