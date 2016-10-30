@@ -1,5 +1,6 @@
 # clj-tomato-bot
 
+[![Build Status](https://travis-ci.org/heycalmdown/clj-tomato-bot.svg?branch=travis)](https://travis-ci.org/heycalmdown/clj-tomato-bot)
 [![Circle CI](https://circleci.com/gh/heycalmdown/clj-tomato-bot.svg?style=shield&no-cache=2)](https://circleci.com/gh/heycalmdown/clj-tomato-bot)
 
 

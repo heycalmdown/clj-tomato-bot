@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [morse "0.2.1"]
                  [clj-http "2.1.0"]]
+  :plugins [[lein-cloverage "1.0.8"]]
   :main ^:skip-aot tomato.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
