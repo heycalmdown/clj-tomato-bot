@@ -63,7 +63,21 @@
                {:message "남은 시간은 30/30초 by test" :message-id 1}))))))
 
 
-;(deftest goto-x-text
-;  (testing ":pomodoro"
-;    (goto-x :pomodoro)
-;    (is (= (:mode @state) :pomodoro))))
+(deftest goto-x-text
+  (testing "default"
+
+    (with-redefs [state-atom (atom {:timer      nil
+                                    :interval   nil
+                                    :started    nil
+                                    :mode       nil
+                                    :message-id nil})]
+
+      (with-redefs-fn {#'current-time (fn [] 0)
+                       #'remaining-each-10s (fn [_] nil)
+                       #'set-timeout (fn [_ _] nil)
+                       #'send-m (fn [m] m)}
+        #(do
+          (goto-x :pomodoro)
+          (is (= (:mode @state-atom) :pomodoro))
+          (goto-x :relax)
+          (is (= (:mode @state-atom) :relax)))))))
