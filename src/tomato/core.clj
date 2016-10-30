@@ -41,19 +41,21 @@
   ([message id] (telegram/edit-text (config/get :token) (config/get :chat-id) id message))
   ([message id options] (telegram/edit-text (config/get :token) (config/get :chat-id) id options message)))
 
+(defn current-time []
+  (System/currentTimeMillis))
 
 
-(defn elapsed-time []
-  (- (System/currentTimeMillis) (:started @state-atom)))
+(defn elapsed-time [started]
+  (- (current-time) started))
 
-(defn base-time []
-  (:during ((:mode @state-atom) modes)))
+(defn base-time [mode]
+  (:during (mode modes)))
 
 (defn ms->sec [ms]
   (quot ms 1000))
 
-(defn remaining-time []
-  (ms->sec (- (base-time) (elapsed-time))))
+(defn remaining-time [state]
+  (ms->sec (- (base-time (:mode state)) (elapsed-time (:started state)))))
 
 (defn session-alive? [state]
   (not (nil? (:timer state))))
@@ -61,11 +63,11 @@
 (defn session-paused? [state]
   (and (nil? (:timer state)) (not (nil? (:elapsed state)))))
 
-(defn pluck-message-id [sent-message]
-  (:message_id (:result sent-message)))
+(defn pluck-message-id [sent]
+  (:message_id (:result sent)))
 
-(defn lang-remaing [remaining-time base-time byline]
-  (str "남은 시간은 " remaining-time "/" base-time "초 by " byline))
+(defn lang-remaing [remaining base byline]
+  (str "남은 시간은 " remaining "/" base "초 by " byline))
 
 
 (defn time-send [message _]
@@ -77,8 +79,8 @@
 
 
 (defn send-remaining [state byline]
-  (let [remaining (remaining-time)
-        base (ms->sec (base-time))
+  (let [remaining (remaining-time state)
+        base (ms->sec (base-time (:mode state)))
         message (lang-remaing remaining base byline)
         message-id (:message-id state)
         action (cond (nil? message-id) time-send
@@ -96,7 +98,7 @@
     (when-not (nil? interval) (future-cancel interval))
     (swap! state-atom assoc
            :mode key
-           :started (System/currentTimeMillis)
+           :started (current-time)
            :message-id nil
            :interval (remaining-each-10s #(deref state-atom))
            :timer (set-timeout #(goto-x (:next mode)) (:during mode)))
@@ -135,7 +137,7 @@
       (future-cancel (:timer @state-atom))
       (future-cancel (:interval @state-atom))
       (swap! state-atom assoc
-             :elapsed (elapsed-time)
+             :elapsed (elapsed-time (:started @state-atom))
              :timer nil)
       (send-m (str (:mode @state-atom) " 잠시 중단 되었습니다")))
     (send-m "중단할 세션이 없습니다")))
@@ -147,7 +149,7 @@
           during (- (:during mode) elapsed)]
 
       (swap! state-atom assoc
-             :started (- (System/currentTimeMillis) elapsed)
+             :started (- (current-time) elapsed)
              :timer (set-timeout #(goto-x (:next mode)) during)
              :interval (remaining-each-10s #(:message-id @state-atom)))
       (send-m "세션을 다시 시작합니다"))

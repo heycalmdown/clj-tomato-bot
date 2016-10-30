@@ -9,7 +9,35 @@
     (is (= (ms->sec 1001) 1)))
   (testing "session-alive?"
     (is (= (session-alive? {:timer nil}) false))
-    (is (= (session-alive? {:timer true}) true))))
+    (is (= (session-alive? {:timer true}) true)))
+  (testing "session-paused?"
+    (is (= (session-paused? {:timer nil :elapsed 1}) true))
+    (is (= (session-paused? {:timer true :elapsed 1}) false))
+    (is (= (session-paused? {:timer nil}) false))
+    (is (= (session-paused? {:timer true}) false))))
+
+(deftest time-test
+  (testing "elapsed"
+    (with-redefs-fn {#'current-time (fn [] 1000)}
+      #(do
+        (is (= (current-time) 1000))
+        (is (= (elapsed-time 500) 500))))))
+
+(deftest sent-message-test
+  (testing "message-id"
+    (let [message {:ok true,
+                   :result {:message_id 1094,
+                            :from {:id 259347720, :first_name "tomato", :username "k_tomato_bot"},
+                            :chat {:id 54879231, :first_name "Kei", :last_name "Son",
+                                   :username "heycalmdown", :type "private"},
+                            :date 1477809856,
+                            :text "haha"}}]
+      (is (= (pluck-message-id message) 1094)))))
+
+(deftest b-test
+  (testing ""
+    (is (= (base-time :pomodoro) (mins 5)))
+    (is (= (base-time :relax) (secs 30)))))
 
 ;(deftest goto-x-text
 ;  (testing ":pomodoro"
