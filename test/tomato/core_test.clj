@@ -31,16 +31,38 @@
         (is (= (remaining-secs {:mode :relax :started (mins 1)}) 30))
         (is (= (remaining-secs {:mode :relax :started (- (mins 1) (secs 25))}) 5))))))
 
+(deftest delay-test
+  (testing "set-timeout"
+    (let [started (current-time)]
+      (set-timeout #(do
+                     (is (>= (- (current-time) started) 100))) 100)))
+  (testing "set-interval"
+    (let [test-atom (atom 1)
+          interval (set-interval #(swap! test-atom inc) 100)]
+      (set-timeout #(do
+                     (future-cancel interval)
+                     (is (>= @test-atom 3)))
+                   300))))
+
 (deftest sent-message-test
   (testing "message-id"
     (let [message {:ok true,
                    :result {:message_id 1094,
-                            :from {:id 259347720, :first_name "tomato", :username "k_tomato_bot"},
-                            :chat {:id 54879231, :first_name "Kei", :last_name "Son",
+                            :from {:id 1234, :first_name "tomato", :username "k_tomato_bot"},
+                            :chat {:id 3456, :first_name "Kei", :last_name "Son",
                                    :username "heycalmdown", :type "private"},
                             :date 1477809856,
                             :text "haha"}}]
-      (is (= (pluck-message-id message) 1094)))))
+      (is (= (pluck-message-id message) 1094))
+      (with-redefs [state-atom (atom {:timer      nil
+                                      :interval   nil
+                                      :started    nil
+                                      :mode       nil
+                                      :message-id nil})]
+        (with-redefs-fn {#'send-m (fn [_ _] message)}
+          #(do
+            (time-send "" 1)
+            (is (= (:message-id @state-atom) 1094))))))))
 
 (deftest lang-test
   (testing "remain"
@@ -60,7 +82,12 @@
                                 :started 0
                                 :message-id 1}
                                "test")
-               {:message "남은 시간은 30/30초 by test" :message-id 1}))))))
+               {:message "남은 시간은 30/30초 by test" :message-id 1})))))
+  (testing "remaining-each-10s"
+    (with-redefs-fn {#'send-remaining (fn [state _] state)
+                     #'set-interval (fn [callback _] (callback))}
+      #(do
+        (is (= (remaining-each-10s (fn [] {:state true})) {:state true}))))))
 
 
 (deftest goto-x-text
