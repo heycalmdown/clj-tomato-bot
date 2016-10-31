@@ -1,9 +1,7 @@
 (ns tomato.core
   (:require [tomato.config :as config]
-            [tomato.morse :as telegram]
-            [cheshire.core :refer :all]
-            [morse.polling :as p]
-            [morse.handlers :refer :all])
+            [morse.api :as telegram]
+            [cheshire.core :refer :all])
   (:gen-class))
 
 
