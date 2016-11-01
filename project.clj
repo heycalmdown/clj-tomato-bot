@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [morse "0.2.2"]
-                 [clj-http "2.1.0"]]
+                 [clj-http "3.3.0"]]
   :plugins [[lein-cloverage "1.0.8"]]
   :main ^:skip-aot tomato.core
   :target-path "target/%s"
