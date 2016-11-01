@@ -1,6 +1,8 @@
 (ns tomato.core-test
   (:require [clojure.test :refer :all]
-            [tomato.core :refer :all]))
+            [tomato.core :refer :all]
+            [tomato.config :as config]
+            [morse.api :as telegram]))
 
 (deftest a-test
   (testing "ms->sec"
@@ -90,7 +92,7 @@
         (is (= (remaining-each-10s (fn [] {:state true})) {:state true}))))))
 
 
-(deftest goto-x-text
+(deftest goto-x-test
   (testing "default"
 
     (with-redefs [state-atom (atom {:timer      nil
@@ -108,3 +110,26 @@
           (is (= (:mode @state-atom) :pomodoro))
           (goto-x :relax)
           (is (= (:mode @state-atom) :relax)))))))
+
+(deftest telegram-test
+  (testing "send-m"
+    (with-redefs-fn
+      {#'telegram/send-text
+       (fn
+         ([token chat-id message] {:token token :chat-id chat-id :message message})
+         ([token chat-id options message] {:token token :chat-id chat-id :options options :message message}))}
+      #(let [without-options (send-m "message")
+             with-options (send-m "message" {:option true})]
+        (is (= (:token without-options) (config/get :token)))
+        (is (= (:option (:options with-options)) true)))))
+  (testing "edit-m"
+    (with-redefs-fn
+      {#'telegram/edit-text
+       (fn
+         ([token chat-id message-id message]
+          {:token token :chat-id chat-id :message-id message-id :message message})
+         ([token chat-id message-id options message]
+          {:token token :chat-id chat-id :options options :message-id message-id :message message}))}
+      #(let [without-options (edit-m "message" 1)
+             with-options (edit-m "message" 1 {:option true})]
+        (is (= (:message-id without-options) 1))))))
