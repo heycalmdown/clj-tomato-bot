@@ -35,16 +35,26 @@
 
 (deftest delay-test
   (testing "set-timeout"
-    (let [started (current-time)]
-      (set-timeout #(do
-                     (is (>= (- (current-time) started) 100))) 100)))
+    (with-redefs [state-atom (atom {:timer      nil
+                                    :interval   nil
+                                    :started    nil
+                                    :mode       nil
+                                    :message-id nil})]
+      (let [started (current-time)]
+        @(set-timeout #(is (>= (- (current-time) started) 100)) 100))))
   (testing "set-interval"
-    (let [test-atom (atom 1)
-          interval (set-interval #(swap! test-atom inc) 100)]
-      (set-timeout #(do
-                     (future-cancel interval)
-                     (is (>= @test-atom 3)))
-                   300))))
+    (with-redefs [state-atom (atom {:timer      nil
+                                    :interval   nil
+                                    :started    nil
+                                    :mode       nil
+                                    :message-id nil})]
+      (let [test-atom (atom 1)
+            interval (set-interval #(swap! test-atom inc) 100)]
+
+        @(set-timeout #(do
+                        (future-cancel interval)
+                        (is (>= @test-atom 3)))
+                      300)))))
 
 (deftest sent-message-test
   (testing "message-id"
