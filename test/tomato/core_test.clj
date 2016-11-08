@@ -73,8 +73,8 @@
                                       :message-id nil})]
         (with-redefs-fn {#'send-m (fn [_ _] message)}
           #(do
-            (time-send "" 1)
-            (is (= (:message-id @state-atom) 1094))))))))
+             (time-send "" 1)
+             (is (= (:message-id (get-state)) 1094))))))))
 
 (deftest lang-test
   (testing "remain"
@@ -116,10 +116,10 @@
                        #'set-timeout (fn [_ _] nil)
                        #'send-m (fn [m] m)}
         #(do
-          (goto-x :pomodoro)
-          (is (= (:mode @state-atom) :pomodoro))
-          (goto-x :relax)
-          (is (= (:mode @state-atom) :relax)))))))
+           (goto-x :pomodoro)
+           (is (= (:mode (get-state)) :pomodoro))
+           (goto-x :relax)
+           (is (= (:mode (get-state)) :relax)))))))
 
 (deftest telegram-test
   (testing "send-m"

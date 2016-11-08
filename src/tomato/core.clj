@@ -1,7 +1,8 @@
 (ns tomato.core
   (:require [tomato.config :as config]
             [morse.api :as telegram]
-            [cheshire.core :refer :all])
+            [cheshire.core :refer :all]
+            [tomato.s3 :as s3])
   (:gen-class))
 
 
@@ -11,6 +12,11 @@
                        :started    nil
                        :mode       nil
                        :message-id nil}))
+
+(defn get-state []
+  (let [state @state-atom
+        s3-state (s3/read "state")]
+    (into state s3-state)))
 
 
 
@@ -89,14 +95,14 @@
 
 (defn goto-x [key]
   (let [mode (key modes)
-        interval (:interval @state-atom)]
+        interval (:interval (get-state))]
     (when-not (nil? interval) (future-cancel interval))
     (swap! state-atom assoc
-           :mode key
-           :started (current-time)
            :message-id nil
-           :interval (remaining-each-10s #(deref state-atom))
+           :interval (remaining-each-10s #(get-state))
            :timer (set-timeout #(goto-x (:next mode)) (:during mode)))
+    (s3/reset! "state" {:mode    key
+                        :started (current-time)})
 
     (when (= key :relax)
       (swap! counted inc))
