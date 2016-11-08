@@ -41,20 +41,24 @@
         (send-m (str (:mode state) " 잠시 중단 되었습니다")))
       (send-m "중단할 세션이 없습니다"))))
 
-(defn handle-resume-session []
-  (let [state (get-state)]
-    (if (session-paused? state)
-      (let [elapsed (:elapsed state)
-            mode ((:mode state) modes)
-            during (- (:during mode) elapsed)]
 
-        (swap! state-atom assoc
-               :timer (set-timeout #(goto-x (:next mode)) during)
-               :interval (remaining-each-10s #(:message-id (get-state))))
-        (tomato.s3/reset! "state" {:mode    (:mode state)
-                                   :started (- (current-time) elapsed)})
-        (send-m "세션을 다시 시작합니다"))
-      (send-m "다시 시작할 세션이 없습니다"))))
+(defn resume [mode elapsed]
+  (let [remained (- (:during mode) elapsed)]
+
+    (swap! state-atom assoc
+           :timer (set-timeout #(goto-x (:next mode)) remained)
+           :interval (remaining-each-10s #(get-state)))
+    (send-m "세션을 다시 시작합니다")))
+
+
+(defn handle-resume-session [state]
+  (if-not (session-paused? state)
+    (send-m "다시 시작할 세션이 없습니다")
+    (let [elapsed (:elapsed state)
+          mode ((:mode state) modes)]
+      (resume mode elapsed)
+      (tomato.s3/reset! "state" {:mode    (:mode state)
+                                 :started (- (current-time) elapsed)}))))
 
 (defhandler bot-api
             (command "go" [] (handle-start-session))
@@ -62,17 +66,9 @@
             (command "count" [] (handle-send-counted @counted))
             (command "cancel" [] (handle-cancel-session))
             (command "pause" [] (handle-pause-session))
-            (command "resume" [] (handle-resume-session)))
+            (command "resume" [] (handle-resume-session (get-state))))
 
 (def channel (atom nil))
-
-(defn resume [mode elapsed]
-  (let [remained (- (:during mode) elapsed)]
-
-    (swap! state-atom assoc
-           :timer (set-timeout #(goto-x (:next mode)) remained)
-           :interval (remaining-each-10s #(:message-id (get-state))))
-    (send-m "세션을 다시 시작합니다")))
 
 (defn start []
   (do (reset! channel (p/start (config/get :token) bot-api))
