@@ -104,22 +104,22 @@
 
 (deftest goto-x-test
   (testing "default"
+    (when (config/get :3)
+      (with-redefs [state-atom (atom {:timer      nil
+                                      :interval   nil
+                                      :started    nil
+                                      :mode       nil
+                                      :message-id nil})]
 
-    (with-redefs [state-atom (atom {:timer      nil
-                                    :interval   nil
-                                    :started    nil
-                                    :mode       nil
-                                    :message-id nil})]
-
-      (with-redefs-fn {#'current-time (fn [] 0)
-                       #'remaining-each-10s (fn [_] nil)
-                       #'set-timeout (fn [_ _] nil)
-                       #'send-m (fn [m] m)}
-        #(do
-           (goto-x :pomodoro)
-           (is (= (:mode (get-state)) :pomodoro))
-           (goto-x :relax)
-           (is (= (:mode (get-state)) :relax)))))))
+        (with-redefs-fn {#'current-time       (fn [] 0)
+                         #'remaining-each-10s (fn [_] nil)
+                         #'set-timeout        (fn [_ _] nil)
+                         #'send-m             (fn [m] m)}
+          #(do
+             (goto-x :pomodoro)
+             (is (= (:mode (get-state)) :pomodoro))
+             (goto-x :relax)
+             (is (= (:mode (get-state)) :relax))))))))
 
 (deftest telegram-test
   (testing "send-m"
