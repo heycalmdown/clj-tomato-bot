@@ -1,7 +1,7 @@
 (ns tomato.s3
-  (:require [clojure.edn :as edn]
-            [tomato.config :as config]
-            [aws.sdk.s3 :as s3]))
+  (:require [amazonica.aws.s3 :as s3]
+            [clojure.edn :as edn]
+            [tomato.config :as config]))
 
 (defn reset! [k v]
   (when (config/get :s3)
@@ -11,5 +11,5 @@
   (when (config/get :s3)
     (try (edn/read-string
            (slurp
-             (:content (s3/get-object (config/get :s3) "clj-tomato-tokyo" k))))
+             (:object-content (s3/get-object (config/get :s3) "clj-tomato-tokyo" k))))
          (catch com.amazonaws.services.s3.model.AmazonS3Exception _ ()))))

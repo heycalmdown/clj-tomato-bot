@@ -4,11 +4,11 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [morse "0.2.2"]
+                 [morse "0.2.2" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [clj-http "3.3.0"]
-                 [clj-aws-s3 "0.3.10" :exclusions [joda-time]]
                  [clj-time "0.12.2"]
-                 [com.amazonaws/aws-lambda-java-core "1.1.0"]]
+                 [com.amazonaws/aws-lambda-java-core "1.1.0"]
+                 [amazonica "0.3.77" :exclusions []]]
   :plugins [[lein-cloverage "1.0.8"]]
   :main ^:skip-aot tomato.core
   :target-path "target/%s"
