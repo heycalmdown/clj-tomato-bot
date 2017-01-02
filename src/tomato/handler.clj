@@ -3,7 +3,8 @@
             [tomato.core :refer :all]
             [cheshire.core :refer :all]
             [morse.polling :as p]
-            [morse.handlers :refer :all]))
+            [morse.handlers :refer :all]
+            [tomato.cloudwatch :as watch]))
 
 
 (defn handle-start-session! []
@@ -59,6 +60,10 @@
       (resume mode elapsed)
       (tomato.s3/reset! "state" {:mode    (:mode state)
                                  :started (- (current-time!) elapsed)}))))
+
+(defn handle-watch []
+  (do (watch/create-watch)
+      (println "create-watch!")))
 
 (defhandler bot-api
             (command "go" [] (handle-start-session!))
