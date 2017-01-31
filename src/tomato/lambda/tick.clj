@@ -17,4 +17,5 @@
 
 (defn -handleRequest [_this is _os _context]
   (do
-    (println (str "is") (json/parse-string (slurp (io/reader is)) key->keyword))))
+    (println (str "is") (json/parse-string (slurp (io/reader is)) key->keyword))
+    (tomato/send-m! "tick-toc")))

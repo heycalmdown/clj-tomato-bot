@@ -65,13 +65,19 @@
   (do (watch/create-watch)
       (println "create-watch!")))
 
+(defn handle-unwatch []
+  (do (watch/cancel-watch)
+      (println "cancel-watch!")))
+
 (defhandler bot-api
             (command "go" [] (handle-start-session!))
             (command "check" [] (handle-check-remaining! (get-state!)))
             (command "count" [] (handle-send-counted! (get-counted!)))
             (command "cancel" [] (handle-cancel-session!))
             (command "pause" [] (handle-pause-session!))
-            (command "resume" [] (handle-resume-session (get-state!))))
+            (command "resume" [] (handle-resume-session (get-state!)))
+            (command "watch" [] (handle-watch))
+            (command "unwatch" [] (handle-unwatch)))
 
 (def channel (atom nil))
 

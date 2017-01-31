@@ -3,6 +3,7 @@
             [morse.api :as telegram]
             [cheshire.core :refer :all]
             [tomato.s3 :as s3]
+            [tomato.cloudwatch :as cwe]
             [clj-time.local :as l]
             [clj-time.format :as f])
   (:gen-class))
@@ -110,15 +111,19 @@
 (defn remaining-each-10s! [get-state]
   (set-interval! #(send-remaining! (get-state) "interval") (secs 10)))
 
+(defn cancel-interval [interval]
+  (when-not (nil? interval) (future-cancel interval)))
 
 (defn goto-x! [key]
   (let [mode (key modes)
         interval (:interval (get-state!))]
-    (when-not (nil? interval) (future-cancel interval))
+    (cancel-interval interval)
     (swap! state-atom assoc
            :message-id nil
-           :interval (remaining-each-10s! #(get-state!))
-           :timer (set-timeout! #(goto-x! (:next mode)) (:during mode)))
+           :interval (remaining-each-10s! #(get-state!)))
+
+    ;:timer (set-timeout! #(goto-x! (:next mode)) (:during mode))
+    (cwe/timeout! "")
     (s3/reset! "state" {:mode    key
                         :started (current-time!)})
 
