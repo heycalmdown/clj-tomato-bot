@@ -9,5 +9,5 @@
     (private-get ((first keys) config) (rest keys))
     config))
 
-(defn get [& keys]
+(defn get! [& keys]
   (private-get config keys))

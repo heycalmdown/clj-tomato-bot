@@ -10,14 +10,14 @@
 
 
 (defn get-state! []
-  (s3/read "state"))
+  (s3/get! "state"))
 
 
 (defn today! []
   (f/unparse (f/formatter :year-month-day) (l/local-now)))
 
 (defn get-today! [date]
-  (let [today (s3/read "today")]
+  (let [today (s3/get! "today")]
     (if-not (= date (:date today))
       {:date date :counted 0}
       today)))
@@ -27,7 +27,7 @@
 
 (defn inc-counted! []
   (let [today (get-today! (today!))]
-    (s3/reset! "today" {:date    (:date today)
+    (s3/put! "today" {:date      (:date today)
                         :counted (inc (:counted today))})))
 
 
@@ -39,12 +39,12 @@
 
 
 (defn send-m!
-  ([message] (telegram/send-text (config/get :token) (config/get :chat-id) message))
-  ([message options] (telegram/send-text (config/get :token) (config/get :chat-id) options message)))
+  ([message] (telegram/send-text (config/get! :token) (config/get! :chat-id) message))
+  ([message options] (telegram/send-text (config/get! :token) (config/get! :chat-id) options message)))
 
 (defn edit-m!
-  ([message id] (telegram/edit-text (config/get :token) (config/get :chat-id) id message))
-  ([message id options] (telegram/edit-text (config/get :token) (config/get :chat-id) id options message)))
+  ([message id] (telegram/edit-text (config/get! :token) (config/get! :chat-id) id message))
+  ([message id options] (telegram/edit-text (config/get! :token) (config/get! :chat-id) id options message)))
 
 (defn now! []
   (System/currentTimeMillis))
@@ -77,7 +77,7 @@
 
 (defn time-send! [message _]
   (let [sent (send-m! message {:disable_notification true})]
-    (s3/swap! "state" assoc :message-id (pluck-message-id sent))))
+    (s3/update! "state" assoc :message-id (pluck-message-id sent))))
 
 
 (defn send-remaining! [state byline]
@@ -92,7 +92,7 @@
 (defn goto-x! [key]
   (let [mode (key modes)]
     (cwe/ensure-timer!)
-    (s3/reset! "state" {:mode       key
+    (s3/put! "state" {:mode         key
                         :started    (now!)
                         :message-id nil
                         :timer      true})

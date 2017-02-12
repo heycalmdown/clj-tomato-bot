@@ -104,7 +104,7 @@
 
 (deftest goto-x-test
   (testing "default"
-    (when (config/get :3)
+    (when (config/get! :3)
       (with-redefs [state-atom (atom {:timer      nil
                                       :interval   nil
                                       :started    nil
@@ -130,7 +130,7 @@
          ([token chat-id options message] {:token token :chat-id chat-id :options options :message message}))}
       #(let [without-options (send-m! "message")
              with-options (send-m! "message" {:option true})]
-        (is (= (:token without-options) (config/get :token)))
+        (is (= (:token without-options) (config/get! :token)))
         (is (= (:option (:options with-options)) true)))))
   (testing "edit-m"
     (with-redefs-fn

@@ -25,7 +25,7 @@
   (let [state (get-state!)]
     (if (session-alive? state)
       (do
-        (tomato.s3/swap! "state" assoc :timer nil)
+        (tomato.s3/update! "state" assoc :timer nil)
         (send-m! (str (:mode state) " 취소되었습니다")))
       (send-m! "취소할 세션이 없습니다"))))
 
@@ -37,10 +37,10 @@
         mode  ((:mode state) modes)]
     (if (session-alive? state)
       (do
-        (tomato.s3/swap! "state"
-                         assoc
-                         :elapsed (elapsed-time! (:started state))
-                         :timer nil)
+        (tomato.s3/update! "state"
+                           assoc
+                           :elapsed (elapsed-time! (:started state))
+                           :timer nil)
         (send-m! (str (:mode state) " 잠시 중단 되었습니다 " (ms->sec (elapsed-time! (:started state))) "/" (ms->sec (:during mode)))))
       (send-m! "중단할 세션이 없습니다"))))
 
@@ -51,9 +51,9 @@
     (let [elapsed (:elapsed state)
           mode    ((:mode state) modes)]
       (send-m! (str "세션을 다시 시작합니다 " (ms->sec elapsed) "/" (ms->sec (:during mode))))
-      (tomato.s3/swap! "state" assoc
-                       :timer true
-                       :started (- (now!) elapsed)))))
+      (tomato.s3/update! "state" assoc
+                         :timer true
+                         :started (- (now!) elapsed)))))
 
 (defn handle-watch []
   (do (watch/create-watch)
@@ -80,8 +80,8 @@
 (def channel (atom nil))
 
 (defn start []
-  (do (reset! channel (p/start (config/get :token) bot-api))
-      (let [prev-state (tomato.s3/read "state")]
+  (do (reset! channel (p/start (config/get! :token) bot-api))
+      (let [prev-state (tomato.s3/get! "state")]
         (if-let [key (:mode prev-state)]
           (let [started (:started prev-state)
                 mode (key modes)
