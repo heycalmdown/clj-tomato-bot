@@ -16,26 +16,40 @@
       :targets [{:id    "tick"
                  :arn   "arn:aws:lambda:ap-northeast-2:472696305832:function:handleTick"}])))
 
-(defn cancel-watch []
-  (try
-    (do
-      (println (cwe/remove-targets (config/get :aws) :rule "test" :ids ["tick"]))
-      (println (cwe/delete-rule
-                 (config/get :aws)
-                 :name "test")))
-    (catch com.amazonaws.services.cloudwatchevents.model.ResourceNotFoundException _ ())))
-
 (defn schedule-expression [mins]
   (if (= mins 1)
     "rate(1 minute)"
     (str "rate(" mins " minutes)")))
 
-(defn timeout! [rule mins]
-  (println (cwe/put-rule
-             (config/get :aws)
-             :name rule
-             :description (str "test" rule)
-             :schedule-expression (schedule-expression mins))))
+(defn ensure-timer! []
+  (let [rule-name "ticker"]
+    (cwe/put-rule
+      (config/get :aws)
+      :name rule-name
+      :description "1 min ticker"
+      :schedule-expression (schedule-expression 1))
+    (cwe/put-targets
+      (config/get :aws)
+      :rule rule-name
+      :targets [{:id    "tick"
+                 :arn   "arn:aws:lambda:ap-northeast-2:472696305832:function:handleTick"
+                 :input (json/encode {:type "ticker"})}])))
+
+(defn timeout! [cur-rule mins next-rule]
+  (cwe/put-rule
+    (config/get :aws)
+    :name cur-rule
+    :description (str "test" cur-rule)
+    :schedule-expression (schedule-expression mins))
+  (cwe/put-targets
+    (config/get :aws)
+    :rule cur-rule
+    :targets [{:id    "tick"
+               :arn   "arn:aws:lambda:ap-northeast-2:472696305832:function:handleTick"
+               :input (json/encode {:cur cur-rule
+                                    :next next-rule})}]))
 
 (defn cancel-timeout! [rule]
-  (println (cwe/delete-rule (config/get :aws) :name rule)))
+  (do
+    (cwe/remove-targets (config/get :aws) :rule rule :ids ["tick"])
+    (cwe/delete-rule (config/get :aws) :name rule)))

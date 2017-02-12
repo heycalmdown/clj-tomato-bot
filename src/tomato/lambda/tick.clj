@@ -3,7 +3,8 @@
             [cheshire.core :as json]
             [clojure.java.io :as io]
             [tomato.core :as tomato]
-            [tomato.handler :as handler])
+            [tomato.handler :as handler]
+            [tomato.cloudwatch :as cwe])
   (:gen-class
     :implements [com.amazonaws.services.lambda.runtime.RequestStreamHandler]))
 
@@ -17,5 +18,19 @@
 
 (defn -handleRequest [_this is _os _context]
   (do
-    (println (str "is") (json/parse-string (slurp (io/reader is)) key->keyword))
-    (tomato/send-m! "tick-toc")))
+    (let [input (json/parse-string (slurp (io/reader is)) key->keyword)
+          state (tomato/get-state!)
+          remaining (tomato/remaining-secs! state)
+          mode ((:mode state) tomato/modes)]
+      (println (str "input v3") input)
+      (println (str "state" state))
+      (if (:timer state)
+        (do
+          (tomato/send-remaining! state "tick")
+          (println remaining)
+          (if (< remaining 5)
+            (tomato/goto-x! (:next mode)))))
+
+      ;(cwe/cancel-timeout! (:cur input))
+      ;(tomato/goto-x! (keyword (:next input)))
+      )))

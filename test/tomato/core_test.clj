@@ -23,12 +23,12 @@
     (is (= (base-time :pomodoro) (mins 5)))
     (is (= (base-time :relax) (secs 30))))
   (testing "elapsed"
-    (with-redefs-fn {#'current-time! (fn [] 1000)}
+    (with-redefs-fn {#'now! (fn [] 1000)}
       #(do
-         (is (= (current-time!) 1000))
+         (is (= (now!) 1000))
          (is (= (elapsed-time! 500) 500)))))
   (testing "remaining"
-    (with-redefs-fn {#'current-time! (fn [] (mins 1))}
+    (with-redefs-fn {#'now! (fn [] (mins 1))}
       #(do
          (is (= (remaining-secs! {:mode :relax :started (mins 1)}) 30))
          (is (= (remaining-secs! {:mode :relax :started (- (mins 1) (secs 25))}) 5))))))
@@ -40,8 +40,8 @@
                                     :started    nil
                                     :mode       nil
                                     :message-id nil})]
-      (let [started (current-time!)]
-        @(set-timeout! #(is (>= (- (current-time!) started) 100)) 100))))
+      (let [started (now!)]
+        @(set-timeout! #(is (>= (- (now!) started) 100)) 100))))
   (testing "set-interval"
     (with-redefs [state-atom (atom {:timer      nil
                                     :interval   nil
@@ -82,9 +82,9 @@
 
 (deftest stateful-test
   (testing "send-remaining"
-    (with-redefs-fn {#'current-time! (fn [] 0)
-                     #'time-send!    (fn [message message-id] {:message message :message-id message-id})
-                     #'edit-m!       (fn [message message-id] {:message message :message-id message-id})}
+    (with-redefs-fn {#'now!       (fn [] 0)
+                     #'time-send! (fn [message message-id] {:message message :message-id message-id})
+                     #'edit-m!    (fn [message message-id] {:message message :message-id message-id})}
       #(do
          (is (= (send-remaining! {:mode  :relax
                                 :started 0}
@@ -111,7 +111,7 @@
                                       :mode       nil
                                       :message-id nil})]
 
-        (with-redefs-fn {#'current-time!       (fn [] 0)
+        (with-redefs-fn {#'now!                (fn [] 0)
                          #'remaining-each-10s! (fn [_] nil)
                          #'set-timeout!        (fn [_ _] nil)
                          #'send-m!             (fn [m] m)}

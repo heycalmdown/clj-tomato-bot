@@ -4,7 +4,8 @@
             [cheshire.core :refer :all]
             [morse.polling :as p]
             [morse.handlers :refer :all]
-            [tomato.cloudwatch :as watch]))
+            [tomato.cloudwatch :as watch]
+            [tomato.s3 :as s3]))
 
 
 (defn handle-start-session! []
@@ -15,15 +16,16 @@
 (defn handle-check-remaining! [state]
   (if (session-alive? state)
     (send-remaining! state "manual")
-    (send-m! "세션이 진행중이 아닙니다")))
+    (if (:elapsed state)
+      (let [mode ((:mode state) modes)]
+        (send-m! (str (:mode state) " 모드가 중단 중입니다 (" (ms->sec (:elapsed state)) "/" (ms->sec (:during mode)) ")")))
+      (send-m! "세션이 진행중이 아닙니다"))))
 
 (defn handle-cancel-session! []
   (let [state (get-state!)]
     (if (session-alive? state)
       (do
-        (future-cancel (:timer state))
-        (future-cancel (:interval state))
-        (swap! state-atom assoc :timer nil)
+        (tomato.s3/swap! "state" assoc :timer nil)
         (send-m! (str (:mode state) " 취소되었습니다")))
       (send-m! "취소할 세션이 없습니다"))))
 
@@ -31,43 +33,38 @@
   (send-m! (str counted)))
 
 (defn handle-pause-session! []
-  (let [state (get-state!)]
+  (let [state (get-state!)
+        mode  ((:mode state) modes)]
     (if (session-alive? state)
       (do
-        (future-cancel (:timer state))
-        (future-cancel (:interval state))
-        (swap! state-atom assoc
-               :elapsed (elapsed-time! (:started state))
-               :timer nil)
-        (send-m! (str (:mode state) " 잠시 중단 되었습니다")))
+        (tomato.s3/swap! "state"
+                         assoc
+                         :elapsed (elapsed-time! (:started state))
+                         :timer nil)
+        (send-m! (str (:mode state) " 잠시 중단 되었습니다 " (ms->sec (elapsed-time! (:started state))) "/" (ms->sec (:during mode)))))
       (send-m! "중단할 세션이 없습니다"))))
-
-
-(defn resume [mode elapsed]
-  (let [remained (- (:during mode) elapsed)]
-
-    (swap! state-atom assoc
-           :timer (set-timeout! #(goto-x! (:next mode)) remained)
-           :interval (remaining-each-10s! #(get-state!)))
-    (send-m! "세션을 다시 시작합니다")))
 
 
 (defn handle-resume-session [state]
   (if-not (session-paused? state)
     (send-m! "다시 시작할 세션이 없습니다")
     (let [elapsed (:elapsed state)
-          mode ((:mode state) modes)]
-      (resume mode elapsed)
-      (tomato.s3/reset! "state" {:mode    (:mode state)
-                                 :started (- (current-time!) elapsed)}))))
+          mode    ((:mode state) modes)]
+      (send-m! (str "세션을 다시 시작합니다 " (ms->sec elapsed) "/" (ms->sec (:during mode))))
+      (tomato.s3/swap! "state" assoc
+                       :timer true
+                       :started (- (now!) elapsed)))))
 
 (defn handle-watch []
   (do (watch/create-watch)
       (println "create-watch!")))
 
 (defn handle-unwatch []
-  (do (watch/cancel-watch)
+  (do
       (println "cancel-watch!")))
+
+(defn handle-get-state! [state]
+  (send-m! (encode state)))
 
 (defhandler bot-api
             (command "go" [] (handle-start-session!))
@@ -76,6 +73,7 @@
             (command "cancel" [] (handle-cancel-session!))
             (command "pause" [] (handle-pause-session!))
             (command "resume" [] (handle-resume-session (get-state!)))
+            (command "state" [] (handle-get-state! (get-state!)))
             (command "watch" [] (handle-watch))
             (command "unwatch" [] (handle-unwatch)))
 
@@ -90,8 +88,7 @@
                 during (base-time key)
                 elapsed (elapsed-time! started)]
             (if (< during elapsed)
-              (goto-x! (:next mode))
-              (resume mode elapsed)))))))
+              (goto-x! (:next mode))))))))
 
 (defn stop []
   (p/stop @channel))

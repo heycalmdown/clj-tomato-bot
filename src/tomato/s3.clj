@@ -13,3 +13,7 @@
            (slurp
              (:object-content (s3/get-object (config/get :aws) "clj-tomato-bot" k))))
          (catch com.amazonaws.services.s3.model.AmazonS3Exception _ ()))))
+
+(defn swap! [k f x y & args]
+  (let [object (tomato.s3/read k)]
+    (reset! k (apply f (concat [object x y] args)))))

@@ -25,6 +25,7 @@
         "cancel" (handler/handle-cancel-session!)
         "pause" (handler/handle-pause-session!)
         "resume" (handler/handle-resume-session (tomato/get-state!))
+        "state" (handler/handle-get-state! (tomato/get-state!))
         "watch" (handler/handle-watch)
         "unwatch" (handler/handle-unwatch)
         (println text)))))

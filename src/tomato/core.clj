@@ -9,16 +9,8 @@
   (:gen-class))
 
 
-(def state-atom (atom {:timer      nil
-                       :interval   nil
-                       :started    nil
-                       :mode       nil
-                       :message-id nil}))
-
 (defn get-state! []
-  (let [state @state-atom
-        s3-state (s3/read "state")]
-    (into state s3-state)))
+  (s3/read "state"))
 
 
 (defn today! []
@@ -43,18 +35,7 @@
 (defn secs [s] (* s 1000))
 (defn mins [m] (* m (secs 60)))
 (def modes {:pomodoro {:text #(str "업무로 돌아올 시간입니다! " (get-counted!)), :next :relax, :during (mins 5)}
-            :relax    {:text #(str "쉴 시간입니다!"), :next :pomodoro, :during (secs 30)}})
-
-
-
-
-(defn set-interval! [callback ms]
-  (future (while true (do (Thread/sleep ms) (callback)))))
-
-(defn set-timeout! [callback ms]
-  (future (do (Thread/sleep ms)
-              (swap! state-atom assoc :timer nil)
-              (callback))))
+            :relax    {:text #(str "쉴 시간입니다!"), :next :pomodoro, :during (mins 1)}})
 
 
 (defn send-m!
@@ -65,12 +46,12 @@
   ([message id] (telegram/edit-text (config/get :token) (config/get :chat-id) id message))
   ([message id options] (telegram/edit-text (config/get :token) (config/get :chat-id) id options message)))
 
-(defn current-time! []
+(defn now! []
   (System/currentTimeMillis))
 
 
 (defn elapsed-time! [started]
-  (- (current-time!) started))
+  (- (now!) started))
 
 (defn base-time [mode]
   (:during (mode modes)))
@@ -96,7 +77,7 @@
 
 (defn time-send! [message _]
   (let [sent (send-m! message {:disable_notification true})]
-    (swap! state-atom assoc :message-id (pluck-message-id sent))))
+    (s3/swap! "state" assoc :message-id (pluck-message-id sent))))
 
 
 (defn send-remaining! [state byline]
@@ -108,24 +89,13 @@
                      :else edit-m!)]
     (apply action [message message-id])))
 
-(defn remaining-each-10s! [get-state]
-  (set-interval! #(send-remaining! (get-state) "interval") (secs 10)))
-
-(defn cancel-interval [interval]
-  (when-not (nil? interval) (future-cancel interval)))
-
 (defn goto-x! [key]
-  (let [mode (key modes)
-        interval (:interval (get-state!))]
-    (cancel-interval interval)
-    (swap! state-atom assoc
-           :message-id nil
-           :interval (remaining-each-10s! #(get-state!)))
-
-    ;:timer (set-timeout! #(goto-x! (:next mode)) (:during mode))
-    (cwe/timeout! "")
-    (s3/reset! "state" {:mode    key
-                        :started (current-time!)})
+  (let [mode (key modes)]
+    (cwe/ensure-timer!)
+    (s3/reset! "state" {:mode       key
+                        :started    (now!)
+                        :message-id nil
+                        :timer      true})
 
     (when (= key :relax)
       (inc-counted!))
