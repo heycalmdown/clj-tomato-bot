@@ -35,21 +35,7 @@
                  :arn   "arn:aws:lambda:ap-northeast-2:472696305832:function:handleTick"
                  :input (json/encode {:type "ticker"})}])))
 
-(defn timeout! [cur-rule mins next-rule]
-  (cwe/put-rule
-    (config/get! :aws)
-    :name cur-rule
-    :description (str "test" cur-rule)
-    :schedule-expression (schedule-expression mins))
-  (cwe/put-targets
-    (config/get! :aws)
-    :rule cur-rule
-    :targets [{:id    "tick"
-               :arn   "arn:aws:lambda:ap-northeast-2:472696305832:function:handleTick"
-               :input (json/encode {:cur cur-rule
-                                    :next next-rule})}]))
-
-(defn cancel-timeout! [rule]
+(defn delete-timer! []
   (do
-    (cwe/remove-targets (config/get! :aws) :rule rule :ids ["tick"])
-    (cwe/delete-rule (config/get! :aws) :name rule)))
+    (cwe/remove-targets (config/get! :aws) :rule "ticker" :ids ["tick"])
+    (cwe/delete-rule (config/get! :aws) :name "ticker")))

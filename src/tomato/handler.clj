@@ -5,7 +5,8 @@
             [morse.polling :as p]
             [morse.handlers :refer :all]
             [tomato.cloudwatch :as watch]
-            [tomato.s3 :as s3]))
+            [tomato.s3 :as s3]
+            [tomato.cloudwatch :as cwe]))
 
 
 (defn handle-start-session! []
@@ -26,6 +27,7 @@
     (if (session-alive? state)
       (do
         (tomato.s3/update! "state" assoc :timer nil)
+        (cwe/delete-timer!)
         (send-m! (str (:mode state) " 취소되었습니다")))
       (send-m! "취소할 세션이 없습니다"))))
 
