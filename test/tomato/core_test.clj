@@ -2,7 +2,9 @@
   (:require [clojure.test :refer :all]
             [tomato.core :refer :all]
             [tomato.config :as config]
-            [morse.api :as telegram]))
+            [morse.api :as telegram]
+            [tomato.s3 :as s3]
+            [tomato.cloudwatch :as cwe]))
 
 (deftest a-test
   (testing "ms->sec"
@@ -20,8 +22,8 @@
 
 (deftest time-test
   (testing "base-time"
-    (is (= (base-time :pomodoro) (mins 5)))
-    (is (= (base-time :relax) (secs 30))))
+    (is (= (base-time :pomodoro) (mins 10)))
+    (is (= (base-time :relax) (mins 2))))
   (testing "elapsed"
     (with-redefs-fn {#'now! (fn [] 1000)}
       #(do
@@ -30,31 +32,8 @@
   (testing "remaining"
     (with-redefs-fn {#'now! (fn [] (mins 1))}
       #(do
-         (is (= (remaining-secs! {:mode :relax :started (mins 1)}) 30))
-         (is (= (remaining-secs! {:mode :relax :started (- (mins 1) (secs 25))}) 5))))))
-
-(deftest delay-test
-  (testing "set-timeout"
-    (with-redefs [state-atom (atom {:timer      nil
-                                    :interval   nil
-                                    :started    nil
-                                    :mode       nil
-                                    :message-id nil})]
-      (let [started (now!)]
-        @(set-timeout! #(is (>= (- (now!) started) 100)) 100))))
-  (testing "set-interval"
-    (with-redefs [state-atom (atom {:timer      nil
-                                    :interval   nil
-                                    :started    nil
-                                    :mode       nil
-                                    :message-id nil})]
-      (let [test-atom (atom 1)
-            interval (set-interval! #(swap! test-atom inc) 100)]
-
-        @(set-timeout! #(do
-                        (future-cancel interval)
-                        (is (>= @test-atom 3)))
-                       300)))))
+         (is (= (remaining-secs! {:mode :relax :started (mins 1)}) 120))
+         (is (= (remaining-secs! {:mode :relax :started (- (mins 1) (secs 25))}) 95090))))))
 
 (deftest sent-message-test
   (testing "message-id"
@@ -66,12 +45,10 @@
                             :date 1477809856,
                             :text "haha"}}]
       (is (= (pluck-message-id message) 1094))
-      (with-redefs [state-atom (atom {:timer      nil
-                                      :interval   nil
-                                      :started    nil
-                                      :mode       nil
-                                      :message-id nil})]
-        (with-redefs-fn {#'send-m! (fn [_ _] message)}
+      (let [test-atom (atom {:message-id nil})]
+        (with-redefs-fn {#'send-m!    (fn [_ _] message)
+                         #'s3/update! (fn [_ f x y] (swap! test-atom f x y))
+                         #'get-state! (fn [] (deref test-atom))}
           #(do
              (time-send! "" 1)
              (is (= (:message-id (get-state!)) 1094))))))))
@@ -94,32 +71,7 @@
                                   :started  0
                                 :message-id 1}
                                  "test")
-                {:message "남은 시간은 30/30초 by test" :message-id 1})))))
-  (testing "remaining-each-10s"
-    (with-redefs-fn {#'send-remaining! (fn [state _] state)
-                     #'set-interval!   (fn [callback _] (callback))}
-      #(do
-         (is (= (remaining-each-10s! (fn [] {:state true})) {:state true}))))))
-
-
-(deftest goto-x-test
-  (testing "default"
-    (when (config/get! :3)
-      (with-redefs [state-atom (atom {:timer      nil
-                                      :interval   nil
-                                      :started    nil
-                                      :mode       nil
-                                      :message-id nil})]
-
-        (with-redefs-fn {#'now!                (fn [] 0)
-                         #'remaining-each-10s! (fn [_] nil)
-                         #'set-timeout!        (fn [_ _] nil)
-                         #'send-m!             (fn [m] m)}
-          #(do
-             (goto-x! :pomodoro)
-             (is (= (:mode (get-state!)) :pomodoro))
-             (goto-x! :relax)
-             (is (= (:mode (get-state!)) :relax))))))))
+                {:message "남은 시간은 30/30초 by test" :message-id 1}))))))
 
 (deftest telegram-test
   (testing "send-m"

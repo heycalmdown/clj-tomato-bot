@@ -27,15 +27,15 @@
 
 (defn inc-counted! []
   (let [today (get-today! (today!))]
-    (s3/put! "today" {:date      (:date today)
-                        :counted (inc (:counted today))})))
+    (s3/put! "today" {:date    (:date today)
+                      :counted (inc (:counted today))})))
 
 
 
 (defn secs [s] (* s 1000))
 (defn mins [m] (* m (secs 60)))
-(def modes {:pomodoro {:text #(str "업무로 돌아올 시간입니다! " (get-counted!)), :next :relax, :during (mins 5)}
-            :relax    {:text #(str "쉴 시간입니다!"), :next :pomodoro, :during (mins 1)}})
+(def modes {:pomodoro {:text #(str "업무로 돌아올 시간입니다! " (get-counted!)), :next :relax, :during (mins 10)}
+            :relax    {:text #(str "쉴 시간입니다!"), :next :pomodoro, :during (mins 2)}})
 
 
 (defn send-m!
@@ -92,10 +92,10 @@
 (defn goto-x! [key]
   (let [mode (key modes)]
     (cwe/ensure-timer!)
-    (s3/put! "state" {:mode         key
-                        :started    (now!)
-                        :message-id nil
-                        :timer      true})
+    (s3/put! "state" {:mode       key
+                      :started    (now!)
+                      :message-id nil
+                      :timer      true})
 
     (when (= key :relax)
       (inc-counted!))
