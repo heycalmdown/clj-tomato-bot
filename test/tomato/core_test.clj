@@ -33,17 +33,17 @@
     (with-redefs-fn {#'now! (fn [] (mins 1))}
       #(do
          (is (= (remaining-secs! {:mode :relax :started (mins 1)}) 120))
-         (is (= (remaining-secs! {:mode :relax :started (- (mins 1) (secs 25))}) 95090))))))
+         (is (= (remaining-secs! {:mode :relax :started (- (mins 1) (secs 25))}) 95))))))
 
 (deftest sent-message-test
   (testing "message-id"
-    (let [message {:ok true,
+    (let [message {:ok     true,
                    :result {:message_id 1094,
-                            :from {:id 1234, :first_name "tomato", :username "k_tomato_bot"},
-                            :chat {:id 3456, :first_name "Kei", :last_name "Son",
-                                   :username "heycalmdown", :type "private"},
-                            :date 1477809856,
-                            :text "haha"}}]
+                            :from       {:id 1234, :first_name "tomato", :username "k_tomato_bot"},
+                            :chat       {:id       3456, :first_name "Kei", :last_name "Son",
+                                         :username "heycalmdown", :type "private"},
+                            :date       1477809856,
+                            :text       "haha"}}]
       (is (= (pluck-message-id message) 1094))
       (let [test-atom (atom {:message-id nil})]
         (with-redefs-fn {#'send-m!    (fn [_ _] message)
@@ -63,15 +63,15 @@
                      #'time-send! (fn [message message-id] {:message message :message-id message-id})
                      #'edit-m!    (fn [message message-id] {:message message :message-id message-id})}
       #(do
-         (is (= (send-remaining! {:mode  :relax
-                                :started 0}
+         (is (= (send-remaining! {:mode    :relax
+                                  :started 0}
                                  "test")
-                {:message "남은 시간은 30/30초 by test" :message-id nil}))
-         (is (= (send-remaining! {:mode     :relax
-                                  :started  0
-                                :message-id 1}
+                {:message "남은 시간은 120/120초 by test" :message-id nil}))
+         (is (= (send-remaining! {:mode       :relax
+                                  :started    0
+                                  :message-id 1}
                                  "test")
-                {:message "남은 시간은 30/30초 by test" :message-id 1}))))))
+                {:message "남은 시간은 120/120초 by test" :message-id 1}))))))
 
 (deftest telegram-test
   (testing "send-m"
@@ -82,8 +82,8 @@
          ([token chat-id options message] {:token token :chat-id chat-id :options options :message message}))}
       #(let [without-options (send-m! "message")
              with-options (send-m! "message" {:option true})]
-        (is (= (:token without-options) (config/get! :token)))
-        (is (= (:option (:options with-options)) true)))))
+         (is (= (:token without-options) (config/get! :token)))
+         (is (= (:option (:options with-options)) true)))))
   (testing "edit-m"
     (with-redefs-fn
       {#'telegram/edit-text
@@ -94,4 +94,4 @@
           {:token token :chat-id chat-id :options options :message-id message-id :message message}))}
       #(let [without-options (edit-m! "message" 1)
              with-options (edit-m! "message" 1 {:option true})]
-        (is (= (:message-id without-options) 1))))))
+         (is (= (:message-id without-options) 1))))))
